@@ -7,12 +7,22 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { CourseClass, CourseTask, TabId } from '../types';
+import { CourseClass, CourseTask, PriorityFilter, TabId } from '../types';
 import { formatDateLongES, formatRelativeDayES, getTodayISO } from '../utils/dateUtils';
+import {
+  ActivityFilterBar,
+  formatPriorityLabel,
+  getPriorityTextClass,
+} from './ActivityFilterBar';
 
 interface HomeViewProps {
   classes: CourseClass[];
   tasks: CourseTask[];
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  priorityFilter: PriorityFilter;
+  onPriorityChange: (priority: PriorityFilter) => void;
+  onResetFilters: () => void;
   onNavigate: (tab: TabId) => void;
   onAddClass: () => void;
   onEditClass: (item: CourseClass) => void;
@@ -26,6 +36,11 @@ interface HomeViewProps {
 export function HomeView({
   classes,
   tasks,
+  searchQuery,
+  onSearchChange,
+  priorityFilter,
+  onPriorityChange,
+  onResetFilters,
   onNavigate,
   onAddClass,
   onEditClass,
@@ -36,20 +51,53 @@ export function HomeView({
   onToggleTaskStatus,
 }: HomeViewProps) {
   const today = getTodayISO();
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const hasActiveFilter = normalizedQuery.length > 0 || priorityFilter !== 'todas';
+
+  const matchesClass = (cls: CourseClass) => {
+    const priorityOk = priorityFilter === 'todas' || cls.priority === priorityFilter;
+    if (!priorityOk) return false;
+    if (!normalizedQuery) return true;
+    return (
+      cls.title.toLowerCase().includes(normalizedQuery) ||
+      cls.module.toLowerCase().includes(normalizedQuery) ||
+      cls.instructorNote.toLowerCase().includes(normalizedQuery)
+    );
+  };
+
+  const matchesTask = (task: CourseTask) => {
+    const priorityOk = priorityFilter === 'todas' || task.priority === priorityFilter;
+    if (!priorityOk) return false;
+    if (!normalizedQuery) return true;
+    return (
+      task.name.toLowerCase().includes(normalizedQuery) ||
+      task.module.toLowerCase().includes(normalizedQuery) ||
+      task.description.toLowerCase().includes(normalizedQuery)
+    );
+  };
 
   const upcomingClasses = [...classes]
-    .filter((c) => c.date >= today)
+    .filter((c) => c.date >= today && matchesClass(c))
     .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
     .slice(0, 3);
 
   const pendingTasks = [...tasks]
-    .filter((t) => t.status === 'pendiente')
+    .filter((t) => t.status === 'pendiente' && matchesTask(t))
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 
+  const totalUpcomingCount = classes.filter((c) => c.date >= today).length;
+  const totalPendingCount = tasks.filter((t) => t.status === 'pendiente').length;
   const completedCount = tasks.filter((t) => t.status === 'completada').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <ActivityFilterBar
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+        priorityFilter={priorityFilter}
+        onPriorityChange={onPriorityChange}
+      />
+
       <section className="bg-white rounded-2xl border border-slate-200 p-4">
         <p className="text-xs font-semibold text-blue-700">{formatDateLongES(today)}</p>
         <h2 className="text-xl font-bold text-slate-900 mt-1 leading-snug">
@@ -64,7 +112,7 @@ export function HomeView({
           >
             <span className="block text-xs font-medium text-slate-600">Próximas clases</span>
             <span className="block text-2xl font-bold text-slate-900 tabular-nums mt-1">
-              {upcomingClasses.length}
+              {totalUpcomingCount}
             </span>
           </button>
 
@@ -75,7 +123,7 @@ export function HomeView({
           >
             <span className="block text-xs font-medium text-slate-600">Tareas pendientes</span>
             <span className="block text-2xl font-bold text-slate-900 tabular-nums mt-1">
-              {pendingTasks.length}
+              {totalPendingCount}
             </span>
             <span className="block text-[11px] text-slate-500 tabular-nums mt-0.5">
               {completedCount} completadas
@@ -121,18 +169,32 @@ export function HomeView({
         {upcomingClasses.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center">
             <p className="text-base font-semibold text-slate-800">
-              No tienes clases próximas
+              {hasActiveFilter
+                ? 'No hay clases que coincidan con el filtro'
+                : 'No tienes clases próximas'}
             </p>
             <p className="text-sm text-slate-600 mt-1">
-              Agrega una sesión de Google AI Studio para organizarla aquí.
+              {hasActiveFilter
+                ? 'Prueba cambiando la búsqueda o la prioridad seleccionada.'
+                : 'Agrega una sesión de Google AI Studio para organizarla aquí.'}
             </p>
-            <button
-              type="button"
-              onClick={onAddClass}
-              className="mt-4 min-h-[48px] w-full px-4 rounded-xl bg-blue-700 text-white text-sm font-semibold cursor-pointer"
-            >
-              Agregar clase
-            </button>
+            {hasActiveFilter ? (
+              <button
+                type="button"
+                onClick={onResetFilters}
+                className="mt-4 min-h-[44px] w-full px-4 rounded-xl border border-slate-300 bg-white text-slate-800 text-sm font-semibold cursor-pointer"
+              >
+                Limpiar filtros
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onAddClass}
+                className="mt-4 min-h-[48px] w-full px-4 rounded-xl bg-blue-700 text-white text-sm font-semibold cursor-pointer"
+              >
+                Agregar clase
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -142,12 +204,17 @@ export function HomeView({
                 className="bg-white rounded-2xl border border-slate-200 p-4"
               >
                 <p className="text-xs font-semibold text-blue-700 tabular-nums">
-                  {formatRelativeDayES(cls.date)} · {cls.startTime} – {cls.endTime} · {cls.format}
+                  {formatRelativeDayES(cls.date)} · {cls.startTime} – {cls.endTime} ·{' '}
+                  <span className={getPriorityTextClass(cls.priority)}>
+                    {formatPriorityLabel(cls.priority)}
+                  </span>
                 </p>
                 <h3 className="text-base font-bold text-slate-900 mt-1 leading-snug">
                   {cls.title}
                 </h3>
-                <p className="text-sm text-slate-600 mt-1">{cls.module}</p>
+                <p className="text-sm text-slate-600 mt-1">
+                  {cls.module} · {cls.format}
+                </p>
                 {cls.instructorNote && (
                   <p className="text-sm text-slate-600 mt-2 leading-relaxed">
                     {cls.instructorNote}
@@ -195,19 +262,33 @@ export function HomeView({
 
         {pendingTasks.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center">
-            <p className="text-base font-semibold text-emerald-800">
-              Todas tus tareas están completadas
+            <p className="text-base font-semibold text-slate-800">
+              {hasActiveFilter
+                ? 'No hay tareas pendientes con ese filtro'
+                : 'Todas tus tareas están completadas'}
             </p>
             <p className="text-sm text-slate-600 mt-1">
-              Buen trabajo. Puedes agregar una nueva tarea cuando quieras.
+              {hasActiveFilter
+                ? 'Cambia la prioridad o borra el texto de búsqueda para ver más tareas.'
+                : 'Buen trabajo. Puedes agregar una nueva tarea cuando quieras.'}
             </p>
-            <button
-              type="button"
-              onClick={onAddTask}
-              className="mt-4 min-h-[48px] w-full px-4 rounded-xl bg-blue-700 text-white text-sm font-semibold cursor-pointer"
-            >
-              Crear nueva tarea
-            </button>
+            {hasActiveFilter ? (
+              <button
+                type="button"
+                onClick={onResetFilters}
+                className="mt-4 min-h-[44px] w-full px-4 rounded-xl border border-slate-300 bg-white text-slate-800 text-sm font-semibold cursor-pointer"
+              >
+                Limpiar filtros
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onAddTask}
+                className="mt-4 min-h-[48px] w-full px-4 rounded-xl bg-blue-700 text-white text-sm font-semibold cursor-pointer"
+              >
+                Crear nueva tarea
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -218,7 +299,12 @@ export function HomeView({
               >
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 tabular-nums">
                   <Clock className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  <span>Pendiente · Entrega: {formatRelativeDayES(task.dueDate)}</span>
+                  <span>
+                    Pendiente · Entrega: {formatRelativeDayES(task.dueDate)} ·{' '}
+                    <span className={getPriorityTextClass(task.priority)}>
+                      {formatPriorityLabel(task.priority)}
+                    </span>
+                  </span>
                 </div>
                 <h3 className="text-base font-bold text-slate-900 mt-1.5 leading-snug">
                   {task.name}

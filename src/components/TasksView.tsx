@@ -1,10 +1,20 @@
 import { useState } from 'react';
 import { CheckCircle2, Clock, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { CourseTask } from '../types';
+import { CourseTask, PriorityFilter } from '../types';
 import { formatDateShortES } from '../utils/dateUtils';
+import {
+  ActivityFilterBar,
+  formatPriorityLabel,
+  getPriorityTextClass,
+} from './ActivityFilterBar';
 
 interface TasksViewProps {
   tasks: CourseTask[];
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  priorityFilter: PriorityFilter;
+  onPriorityChange: (priority: PriorityFilter) => void;
+  onResetFilters: () => void;
   onAddTask: () => void;
   onEditTask: (task: CourseTask) => void;
   onDeleteTask: (task: CourseTask) => void;
@@ -15,6 +25,11 @@ type TaskFilter = 'todas' | 'pendientes' | 'completadas';
 
 export function TasksView({
   tasks,
+  searchQuery,
+  onSearchChange,
+  priorityFilter,
+  onPriorityChange,
+  onResetFilters,
   onAddTask,
   onEditTask,
   onDeleteTask,
@@ -22,10 +37,25 @@ export function TasksView({
 }: TasksViewProps) {
   const [filter, setFilter] = useState<TaskFilter>('todas');
 
-  const pendingCount = tasks.filter((t) => t.status === 'pendiente').length;
-  const completedCount = tasks.filter((t) => t.status === 'completada').length;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const hasActiveFilter = normalizedQuery.length > 0 || priorityFilter !== 'todas';
 
-  const filteredTasks = [...tasks]
+  const matchesSearchAndPriority = (t: CourseTask) => {
+    const priorityOk = priorityFilter === 'todas' || t.priority === priorityFilter;
+    if (!priorityOk) return false;
+    if (!normalizedQuery) return true;
+    return (
+      t.name.toLowerCase().includes(normalizedQuery) ||
+      t.module.toLowerCase().includes(normalizedQuery) ||
+      t.description.toLowerCase().includes(normalizedQuery)
+    );
+  };
+
+  const baseTasks = tasks.filter(matchesSearchAndPriority);
+  const pendingCount = baseTasks.filter((t) => t.status === 'pendiente').length;
+  const completedCount = baseTasks.filter((t) => t.status === 'completada').length;
+
+  const filteredTasks = [...baseTasks]
     .filter((t) => {
       if (filter === 'pendientes') return t.status === 'pendiente';
       if (filter === 'completadas') return t.status === 'completada';
@@ -49,6 +79,13 @@ export function TasksView({
         <span>Agregar nueva tarea</span>
       </button>
 
+      <ActivityFilterBar
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+        priorityFilter={priorityFilter}
+        onPriorityChange={onPriorityChange}
+      />
+
       <div
         role="tablist"
         aria-label="Filtrar tareas por estado"
@@ -65,7 +102,7 @@ export function TasksView({
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Todas ({tasks.length})
+          Todas ({baseTasks.length})
         </button>
         <button
           type="button"
@@ -98,15 +135,28 @@ export function TasksView({
       {filteredTasks.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center">
           <p className="text-base font-semibold text-slate-800">
-            {filter === 'pendientes'
-              ? 'No tienes tareas pendientes'
-              : filter === 'completadas'
-                ? 'Aún no has completado tareas'
-                : 'No hay tareas registradas'}
+            {hasActiveFilter
+              ? 'No hay actividades que coincidan con el filtro'
+              : filter === 'pendientes'
+                ? 'No tienes tareas pendientes'
+                : filter === 'completadas'
+                  ? 'Aún no has completado tareas'
+                  : 'No hay tareas registradas'}
           </p>
           <p className="text-sm text-slate-600 mt-1">
-            Agrega una actividad de tu curso de Google AI Studio.
+            {hasActiveFilter
+              ? 'Cambia la prioridad o borra el texto de búsqueda para ver más tareas.'
+              : 'Agrega una actividad de tu curso de Google AI Studio.'}
           </p>
+          {hasActiveFilter && (
+            <button
+              type="button"
+              onClick={onResetFilters}
+              className="mt-4 min-h-[44px] w-full px-4 rounded-xl border border-slate-300 bg-white text-slate-800 text-sm font-semibold cursor-pointer"
+            >
+              Limpiar filtros
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -128,8 +178,10 @@ export function TasksView({
                     <Clock className="w-4 h-4 shrink-0" aria-hidden="true" />
                   )}
                   <span>
-                    {isDone ? 'Completada' : 'Pendiente'} · Entrega:{' '}
-                    {formatDateShortES(task.dueDate)}
+                    {isDone ? 'Completada' : 'Pendiente'} · {formatDateShortES(task.dueDate)} ·{' '}
+                    <span className={getPriorityTextClass(task.priority)}>
+                      {formatPriorityLabel(task.priority)}
+                    </span>
                   </span>
                 </div>
 

@@ -9,7 +9,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { CourseClass, CourseTask } from '../types';
+import { CourseClass, CourseTask, PriorityFilter } from '../types';
 import {
   addDaysISO,
   formatDateLongES,
@@ -17,10 +17,20 @@ import {
   getTodayISO,
   getWeekDaysISO,
 } from '../utils/dateUtils';
+import {
+  ActivityFilterBar,
+  formatPriorityLabel,
+  getPriorityTextClass,
+} from './ActivityFilterBar';
 
 interface CalendarViewProps {
   classes: CourseClass[];
   tasks: CourseTask[];
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  priorityFilter: PriorityFilter;
+  onPriorityChange: (priority: PriorityFilter) => void;
+  onResetFilters: () => void;
   onAddClassForDate: (dateISO: string) => void;
   onEditClass: (item: CourseClass) => void;
   onDeleteClass: (item: CourseClass) => void;
@@ -35,6 +45,11 @@ type CalendarMode = 'dia' | 'semana';
 export function CalendarView({
   classes,
   tasks,
+  searchQuery,
+  onSearchChange,
+  priorityFilter,
+  onPriorityChange,
+  onResetFilters,
   onAddClassForDate,
   onEditClass,
   onDeleteClass,
@@ -47,22 +62,54 @@ export function CalendarView({
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [mode, setMode] = useState<CalendarMode>('dia');
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const hasActiveFilter = normalizedQuery.length > 0 || priorityFilter !== 'todas';
+
+  const matchesClass = (cls: CourseClass) => {
+    const priorityOk = priorityFilter === 'todas' || cls.priority === priorityFilter;
+    if (!priorityOk) return false;
+    if (!normalizedQuery) return true;
+    return (
+      cls.title.toLowerCase().includes(normalizedQuery) ||
+      cls.module.toLowerCase().includes(normalizedQuery) ||
+      cls.instructorNote.toLowerCase().includes(normalizedQuery)
+    );
+  };
+
+  const matchesTask = (task: CourseTask) => {
+    const priorityOk = priorityFilter === 'todas' || task.priority === priorityFilter;
+    if (!priorityOk) return false;
+    if (!normalizedQuery) return true;
+    return (
+      task.name.toLowerCase().includes(normalizedQuery) ||
+      task.module.toLowerCase().includes(normalizedQuery) ||
+      task.description.toLowerCase().includes(normalizedQuery)
+    );
+  };
+
   const weekDays = getWeekDaysISO(selectedDate);
 
   const countForDate = (iso: string) => {
-    const classCount = classes.filter((c) => c.date === iso).length;
-    const taskCount = tasks.filter((t) => t.dueDate === iso).length;
+    const classCount = classes.filter((c) => c.date === iso && matchesClass(c)).length;
+    const taskCount = tasks.filter((t) => t.dueDate === iso && matchesTask(t)).length;
     return classCount + taskCount;
   };
 
   const dayClasses = classes
-    .filter((c) => c.date === selectedDate)
+    .filter((c) => c.date === selectedDate && matchesClass(c))
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-  const dayTasks = tasks.filter((t) => t.dueDate === selectedDate);
+  const dayTasks = tasks.filter((t) => t.dueDate === selectedDate && matchesTask(t));
 
   return (
     <div className="space-y-4">
+      <ActivityFilterBar
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+        priorityFilter={priorityFilter}
+        onPriorityChange={onPriorityChange}
+      />
+
       <div
         role="tablist"
         aria-label="Modo de calendario"
@@ -213,11 +260,24 @@ export function CalendarView({
           {dayClasses.length === 0 && dayTasks.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center">
               <p className="text-base font-semibold text-slate-800">
-                Sin actividades en este día
+                {hasActiveFilter
+                  ? 'Sin actividades que coincidan con el filtro'
+                  : 'Sin actividades en este día'}
               </p>
               <p className="text-sm text-slate-600 mt-1">
-                Toca “Agregar clase” o “Agregar tarea” para planificar esta fecha.
+                {hasActiveFilter
+                  ? 'Prueba otra prioridad o limpia la búsqueda.'
+                  : 'Toca “Agregar clase” o “Agregar tarea” para planificar esta fecha.'}
               </p>
+              {hasActiveFilter && (
+                <button
+                  type="button"
+                  onClick={onResetFilters}
+                  className="mt-4 min-h-[44px] w-full px-4 rounded-xl border border-slate-300 bg-white text-slate-800 text-sm font-semibold cursor-pointer"
+                >
+                  Limpiar filtros
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -227,10 +287,15 @@ export function CalendarView({
                   className="bg-white rounded-2xl border border-slate-200 p-4"
                 >
                   <p className="text-xs font-semibold text-blue-700 tabular-nums">
-                    Clase · {cls.startTime} – {cls.endTime} · {cls.format}
+                    Clase · {cls.startTime} – {cls.endTime} ·{' '}
+                    <span className={getPriorityTextClass(cls.priority)}>
+                      {formatPriorityLabel(cls.priority)}
+                    </span>
                   </p>
                   <h3 className="text-base font-bold text-slate-900 mt-1">{cls.title}</h3>
-                  <p className="text-sm text-slate-600 mt-1">{cls.module}</p>
+                  <p className="text-sm text-slate-600 mt-1">
+                    {cls.module} · {cls.format}
+                  </p>
                   {cls.instructorNote && (
                     <p className="text-sm text-slate-600 mt-2 leading-relaxed">
                       {cls.instructorNote}
@@ -275,7 +340,10 @@ export function CalendarView({
                         <Clock className="w-4 h-4 shrink-0" aria-hidden="true" />
                       )}
                       <span>
-                        Tarea · {isDone ? 'Completada' : 'Pendiente'} · {task.module}
+                        Tarea · {isDone ? 'Completada' : 'Pendiente'} ·{' '}
+                        <span className={getPriorityTextClass(task.priority)}>
+                          {formatPriorityLabel(task.priority)}
+                        </span>
                       </span>
                     </div>
                     <h3
@@ -285,6 +353,7 @@ export function CalendarView({
                     >
                       {task.name}
                     </h3>
+                    <p className="text-xs font-medium text-slate-500 mt-1">{task.module}</p>
                     <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
                       {task.description}
                     </p>
@@ -330,9 +399,9 @@ export function CalendarView({
         <section className="space-y-3" aria-label="Resumen semanal de actividades">
           {weekDays.map((day) => {
             const wClasses = classes
-              .filter((c) => c.date === day.iso)
+              .filter((c) => c.date === day.iso && matchesClass(c))
               .sort((a, b) => a.startTime.localeCompare(b.startTime));
-            const wTasks = tasks.filter((t) => t.dueDate === day.iso);
+            const wTasks = tasks.filter((t) => t.dueDate === day.iso && matchesTask(t));
             const isToday = day.iso === today;
 
             return (
@@ -365,7 +434,10 @@ export function CalendarView({
                       <div key={cls.id} className="space-y-2 pb-2.5 border-b border-slate-100 last:border-b-0 last:pb-0">
                         <div>
                           <p className="text-xs font-semibold text-blue-700 tabular-nums">
-                            Clase · {cls.startTime} – {cls.endTime}
+                            Clase · {cls.startTime} – {cls.endTime} ·{' '}
+                            <span className={getPriorityTextClass(cls.priority)}>
+                              {formatPriorityLabel(cls.priority)}
+                            </span>
                           </p>
                           <p className="text-sm font-semibold text-slate-900 mt-0.5">{cls.title}</p>
                         </div>
@@ -398,7 +470,10 @@ export function CalendarView({
                                 isDone ? 'text-emerald-800' : 'text-amber-800'
                               }`}
                             >
-                              Tarea · {isDone ? 'Completada' : 'Pendiente'}
+                              Tarea · {isDone ? 'Completada' : 'Pendiente'} ·{' '}
+                              <span className={getPriorityTextClass(task.priority)}>
+                                {formatPriorityLabel(task.priority)}
+                              </span>
                             </p>
                             <p
                               className={`text-sm font-semibold mt-0.5 ${

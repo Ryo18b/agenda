@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { CourseClass } from '../types';
+import { CourseClass, Priority } from '../types';
 import { getTodayISO } from '../utils/dateUtils';
 
 interface ClassModalProps {
@@ -32,6 +32,7 @@ export function ClassModal({
   const [endTime, setEndTime] = useState('19:00');
   const [format, setFormat] = useState('Clase en vivo');
   const [instructorNote, setInstructorNote] = useState('');
+  const [priority, setPriority] = useState<Priority>('media');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export function ClassModal({
       setEndTime(initialClass.endTime);
       setFormat(initialClass.format);
       setInstructorNote(initialClass.instructorNote);
+      setPriority(initialClass.priority || 'media');
     } else {
       setTitle('');
       setModule('Módulo 1 · Google AI Studio');
@@ -52,6 +54,7 @@ export function ClassModal({
       setEndTime('19:15');
       setFormat('Clase en vivo');
       setInstructorNote('');
+      setPriority('media');
     }
     setError('');
   }, [isOpen, initialClass, defaultDate]);
@@ -77,6 +80,7 @@ export function ClassModal({
         endTime: endTime || '19:00',
         format,
         instructorNote: instructorNote.trim(),
+        priority,
       },
       initialClass?.id,
     );
@@ -217,6 +221,26 @@ export function ClassModal({
               placeholder="Material necesario o temas a preparar antes de la sesión"
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-base text-slate-900 placeholder:text-slate-400 focus:outline-2 focus:outline-blue-600"
             />
+          </div>
+
+          <div>
+            <span className="block text-sm font-semibold text-slate-800 mb-1.5">Prioridad</span>
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
+              {(['alta', 'media', 'baja'] as const).map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setPriority(level)}
+                  className={`min-h-[44px] rounded-lg text-sm font-semibold capitalize transition-colors cursor-pointer ${
+                    priority === level
+                      ? 'bg-white text-blue-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="pt-2 grid grid-cols-2 gap-2.5">

@@ -18,6 +18,7 @@ import {
   CourseNote,
   CourseTask,
   DeleteTarget,
+  PriorityFilter,
   TabId,
 } from './types';
 
@@ -34,8 +35,8 @@ function loadInitialState(): AgendaState {
         Array.isArray(parsed.notes)
       ) {
         return {
-          classes: parsed.classes,
-          tasks: parsed.tasks,
+          classes: parsed.classes.map((c) => ({ ...c, priority: c.priority || 'media' })),
+          tasks: parsed.tasks.map((t) => ({ ...t, priority: t.priority || 'media' })),
           notes: parsed.notes,
         };
       }
@@ -62,6 +63,8 @@ function getFormattedTime(): string {
 export default function App() {
   const [agenda, setAgenda] = useState<AgendaState>(loadInitialState);
   const [activeTab, setActiveTab] = useState<TabId>('inicio');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('todas');
   const [clock, setClock] = useState<string>(getFormattedTime);
   const mainRef = useRef<HTMLElement | null>(null);
 
@@ -227,6 +230,11 @@ export default function App() {
     mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setPriorityFilter('todas');
+  };
+
   return (
     <div className="min-h-dvh bg-slate-200 px-2 py-3 sm:p-5 flex flex-col items-center overflow-y-auto">
       {/* Marco exterior de teléfono celular */}
@@ -277,6 +285,11 @@ export default function App() {
               <HomeView
                 classes={agenda.classes}
                 tasks={agenda.tasks}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                priorityFilter={priorityFilter}
+                onPriorityChange={setPriorityFilter}
+                onResetFilters={handleResetFilters}
                 onNavigate={handleSelectTab}
                 onAddClass={() => openNewClass()}
                 onEditClass={openEditClass}
@@ -296,6 +309,11 @@ export default function App() {
               <CalendarView
                 classes={agenda.classes}
                 tasks={agenda.tasks}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                priorityFilter={priorityFilter}
+                onPriorityChange={setPriorityFilter}
+                onResetFilters={handleResetFilters}
                 onAddClassForDate={(dateISO) => openNewClass(dateISO)}
                 onEditClass={openEditClass}
                 onDeleteClass={(cls) =>
@@ -313,6 +331,11 @@ export default function App() {
             {activeTab === 'tareas' && (
               <TasksView
                 tasks={agenda.tasks}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                priorityFilter={priorityFilter}
+                onPriorityChange={setPriorityFilter}
+                onResetFilters={handleResetFilters}
                 onAddTask={() => openNewTask()}
                 onEditTask={openEditTask}
                 onDeleteTask={(task) =>

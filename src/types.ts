@@ -2,6 +2,10 @@ export type TabId = 'inicio' | 'calendario' | 'tareas' | 'notas' | 'progreso';
 
 export type TaskStatus = 'pendiente' | 'completada';
 
+export type Priority = 'alta' | 'media' | 'baja';
+
+export type PriorityFilter = 'todas' | Priority;
+
 export interface CourseClass {
   id: string;
   title: string;
@@ -11,6 +15,7 @@ export interface CourseClass {
   endTime: string; // HH:MM
   format: string; // e.g. "En vivo", "Taller práctico", "Grabada + Q&A"
   instructorNote: string;
+  priority: Priority;
 }
 
 export interface CourseTask {
@@ -20,6 +25,7 @@ export interface CourseTask {
   dueDate: string; // YYYY-MM-DD
   status: TaskStatus;
   module: string;
+  priority: Priority;
 }
 
 export interface CourseNote {

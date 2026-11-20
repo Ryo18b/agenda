@@ -15,6 +15,7 @@ export function createInitialAgendaData(): AgendaState {
         endTime: '19:15',
         format: 'Clase en vivo',
         instructorNote: 'Tener creada una cuenta de Google para generar tu primera API key.',
+        priority: 'alta',
       },
       {
         id: 'cls-2',
@@ -25,6 +26,7 @@ export function createInitialAgendaData(): AgendaState {
         endTime: '19:30',
         format: 'Taller práctico',
         instructorNote: 'Revisaremos ejemplos few-shot y control de formato en español.',
+        priority: 'alta',
       },
       {
         id: 'cls-3',
@@ -35,6 +37,7 @@ export function createInitialAgendaData(): AgendaState {
         endTime: '19:00',
         format: 'Clase en vivo',
         instructorNote: 'Cómo obtener respuestas estructuradas confiables para apps web.',
+        priority: 'media',
       },
       {
         id: 'cls-4',
@@ -45,6 +48,7 @@ export function createInitialAgendaData(): AgendaState {
         endTime: '11:30',
         format: 'Sesión grabada y dudas',
         instructorNote: 'Práctica guiada subiendo diagramas y notas de voz a Gemini.',
+        priority: 'baja',
       },
       {
         id: 'cls-5',
@@ -55,6 +59,7 @@ export function createInitialAgendaData(): AgendaState {
         endTime: '19:30',
         format: 'Proyecto final',
         instructorNote: 'Uso correcto de variables de entorno y rutas backend seguras.',
+        priority: 'alta',
       },
     ],
     tasks: [
@@ -66,6 +71,7 @@ export function createInitialAgendaData(): AgendaState {
         dueDate: addDaysISO(today, -1),
         status: 'completada',
         module: 'Módulo 1 · Fundamentos',
+        priority: 'alta',
       },
       {
         id: 'tsk-2',
@@ -75,6 +81,7 @@ export function createInitialAgendaData(): AgendaState {
         dueDate: today,
         status: 'completada',
         module: 'Módulo 1 · Fundamentos',
+        priority: 'media',
       },
       {
         id: 'tsk-3',
@@ -84,6 +91,7 @@ export function createInitialAgendaData(): AgendaState {
         dueDate: addDaysISO(today, 1),
         status: 'pendiente',
         module: 'Módulo 2 · Prompting',
+        priority: 'alta',
       },
       {
         id: 'tsk-4',
@@ -93,6 +101,7 @@ export function createInitialAgendaData(): AgendaState {
         dueDate: addDaysISO(today, 3),
         status: 'pendiente',
         module: 'Módulo 3 · Integración',
+        priority: 'media',
       },
       {
         id: 'tsk-5',
@@ -102,6 +111,7 @@ export function createInitialAgendaData(): AgendaState {
         dueDate: addDaysISO(today, 5),
         status: 'pendiente',
         module: 'Módulo 4 · Multimodalidad',
+        priority: 'baja',
       },
     ],
     notes: [

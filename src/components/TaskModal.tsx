@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { CourseTask, TaskStatus } from '../types';
+import { CourseTask, Priority, TaskStatus } from '../types';
 import { getTodayISO } from '../utils/dateUtils';
 
 interface TaskModalProps {
@@ -23,6 +23,7 @@ export function TaskModal({
   const [dueDate, setDueDate] = useState(getTodayISO());
   const [status, setStatus] = useState<TaskStatus>('pendiente');
   const [module, setModule] = useState('Curso Google AI Studio');
+  const [priority, setPriority] = useState<Priority>('media');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -33,12 +34,14 @@ export function TaskModal({
       setDueDate(initialTask.dueDate);
       setStatus(initialTask.status);
       setModule(initialTask.module);
+      setPriority(initialTask.priority || 'media');
     } else {
       setName('');
       setDescription('');
       setDueDate(defaultDate || getTodayISO());
       setStatus('pendiente');
       setModule('Módulo · Google AI Studio');
+      setPriority('media');
     }
     setError('');
   }, [isOpen, initialTask, defaultDate]);
@@ -62,6 +65,7 @@ export function TaskModal({
         dueDate,
         status,
         module: module.trim() || 'Curso Google AI Studio',
+        priority,
       },
       initialTask?.id,
     );
@@ -152,6 +156,26 @@ export function TaskModal({
                 placeholder="Ej. Módulo 3 · Integración"
                 className="w-full min-h-[48px] px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-base text-slate-900 placeholder:text-slate-400 focus:outline-2 focus:outline-blue-600"
               />
+            </div>
+          </div>
+
+          <div>
+            <span className="block text-sm font-semibold text-slate-800 mb-1.5">Prioridad</span>
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
+              {(['alta', 'media', 'baja'] as const).map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setPriority(level)}
+                  className={`min-h-[44px] rounded-lg text-sm font-semibold capitalize transition-colors cursor-pointer ${
+                    priority === level
+                      ? 'bg-white text-blue-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {level}
+                </button>
+              ))}
             </div>
           </div>
 
